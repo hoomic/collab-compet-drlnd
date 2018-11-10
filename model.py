@@ -74,7 +74,7 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     """Critic (Value) Model."""
 
-    def __init__(self, state_size, action_size, seed, fc_units= [1024, 512], action_cat_layer=1):
+    def __init__(self, state_size, action_size, seed, fc_units= [1024, 512], action_cat_layer=0):
         """Initialize parameters and build model.
         Params
         ======
