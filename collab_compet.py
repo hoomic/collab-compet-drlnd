@@ -13,21 +13,24 @@ def ddpg(n_episodes, num_agents=1, slow_every=100, slow_by=None):
     scores_window = deque(maxlen=100)  # last 100 scores
     for i_episode in range(1, n_episodes +1):
         env_info = env.reset(train_mode=False)[brain_name]     # reset the environment    
-        states = env_info.vector_observations.reshape(-1,)                  # get the current state (for each agent)
+        states = env_info.vector_observations                  # get the current state (for each agent)
         scores = np.zeros(num_agents)                          # initialize the score (for each agent)
         agent.reset()
         t = 0
         while True:
             t += 1
-            actions = agent.act(states)                        # select an action (for each agent)
-            actions = np.clip(actions, -1, 1)                  # all actions between -1 and 1
+            actions0 = agent.act(states[0])                        # select an action (for each agent)
+            actions1 = agent.act(states[1])
+            actions0 = np.clip(actions0, -1, 1)
+            actions1 = np.clip(actions1, -1, 1)                  # all actions between -1 and 1
             #print(actions)
-            env_info = env.step(actions)[brain_name]           # send all actions to tne environment
-            next_states = env_info.vector_observations.reshape(-1,)         # get next state (for each agent)
-            rewards = np.sum(env_info.rewards)                         # get reward (for each agent)
+            env_info = env.step(np.concatenate((actions0, actions1)))[brain_name]           # send all actions to tne environment
+            next_states = env_info.vector_observations         # get next state (for each agent)
+            rewards = env_info.rewards                         # get reward (for each agent)
             dones = env_info.local_done                        # see if episode finished
-            agent.step(states, actions, rewards, next_states, dones)
-            scores += rewards                         # update the score (for each agent)
+            agent.step(states[0], actions0, rewards[0], next_states[0], dones)
+            agent.step(states[1], actions1, rewards[1], next_states[1], dones)
+            scores += np.sum(rewards)                         # update the score (for each agent)
             states = next_states                               # roll over states to next time step
             if slow_by is not None and i_episode % slow_every == 0:
               sleep(slow_by)
@@ -119,8 +122,8 @@ if __name__ == '__main__':
   # reset the environment
   env_info = env.reset(train_mode=True)[brain_name]
   agent = Agent(
-    state_size=len(env_info.vector_observations[0]) * 2
-    , action_size=brain.vector_action_space_size * 2
+    state_size=len(env_info.vector_observations[0])
+    , action_size=brain.vector_action_space_size
     , actor_hidden_layers=args.actor_hidden_layers
     , critic_hidden_layers=args.critic_hidden_layers
     , ou_theta=args.ou_theta
