@@ -24,7 +24,7 @@ def ddpg(n_episodes, num_agents=1, slow_every=100, slow_by=None):
             actions2 = agents[1].act(states[1])
             actions1 = np.clip(actions1, -1, 1)                  # all actions between -1 and 1
             actions2 = np.clip(actions2, -1, 1)
-            print(actions1, actions2)
+            #print(actions1, actions2)
             env_info = env.step(np.concatenate((actions1, actions2)))[brain_name]           # send all actions to tne environment
             next_states = env_info.vector_observations         # get next state (for each agent)
             rewards = env_info.rewards                         # get reward (for each agent)
