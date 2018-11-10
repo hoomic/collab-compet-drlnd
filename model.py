@@ -23,9 +23,12 @@ class Actor(nn.Module):
         """
         super(Actor, self).__init__()
         self.action_size = action_size
+        self.state_size = state_size
         self.seed = torch.manual_seed(seed)
+        self.bn_input = nn.BatchNorm1d(state_size)
         self.fc1 = nn.Linear(state_size, fc_units[0])
         self.layers = nn.ModuleList([nn.Linear(fc_units[i], fc_units[i+1]) for i in range(len(fc_units) - 1)])
+        self.bn_layers = nn.ModuleList([nn.BatchNorm1d(fc_units[i]) for i in range(len(fc_units) - 1)])
         if action_size == 2:
             self.movement = nn.Linear(fc_units[-1], 1)
             self.jump = nn.Linear(fc_units[-1], 1)
@@ -51,9 +54,12 @@ class Actor(nn.Module):
 
     def forward(self, state):
         """Build an actor (policy) network that maps states -> actions."""
-        x = F.relu(self.fc1(state))
-        for l in self.layers:
-            x = F.relu(l(x))
+        state = state.reshape(-1, self.state_size)
+        x = self.bn_input(state)
+        x = F.tanh(self.fc1(x))
+        for i, l in enumerate(self.layers):
+            x = self.bn_layers[i](x)
+            x = F.tanh(l(x))
         if self.action_size == 2:
             m = F.tanh(self.movement(x))
             j = F.sigmoid(self.jump(x))
@@ -68,7 +74,7 @@ class Actor(nn.Module):
 class Critic(nn.Module):
     """Critic (Value) Model."""
 
-    def __init__(self, state_size, action_size, seed, fc_units= [1024, 512], action_cat_layer=0):
+    def __init__(self, state_size, action_size, seed, fc_units= [1024, 512], action_cat_layer=1):
         """Initialize parameters and build model.
         Params
         ======
@@ -80,9 +86,12 @@ class Critic(nn.Module):
         """
         super(Critic, self).__init__()
         self.seed = torch.manual_seed(seed)
+        self.state_size = state_size
         self.action_cat_layer = action_cat_layer
+        self.bn_input = nn.BatchNorm1d(state_size)
         self.fc1 = nn.Linear(state_size, fc_units[0])
         self.layers = nn.ModuleList([nn.Linear(fc_units[i] + (action_size if i == action_cat_layer else 0), fc_units[i+1]) for i in range(len(fc_units) - 1)])
+        self.bn_layers = nn.ModuleList([nn.BatchNorm1d(fc_units[i] + (action_size if i == action_cat_layer else 0) )for i in range(len(fc_units) - 1)])
         self.output = nn.Linear(fc_units[-1], 1)
         self.reset_parameters()
 
@@ -94,9 +103,12 @@ class Critic(nn.Module):
 
     def forward(self, state, action):
         """Build a critic (value) network that maps (state, action) pairs -> Q-values."""
-        x = F.relu(self.fc1(state))
+        state = state.reshape(-1, self.state_size)
+        x = self.bn_input(state)
+        x = F.relu(self.fc1(x))
         for i, l in enumerate(self.layers):
             if i == self.action_cat_layer:
                 x = torch.cat((x, action), dim=1)
+            x = self.bn_layers[i](x)
             x = F.relu(l(x))
         return self.output(x)
