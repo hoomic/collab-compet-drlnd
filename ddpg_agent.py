@@ -11,10 +11,10 @@ import torch.optim as optim
 
 BUFFER_SIZE = int(1e5)  # replay buffer size
 BATCH_SIZE = 128        # minibatch size
-GAMMA = 0.99            # discount factor
-TAU = 1e-4              # for soft update of target parameters
-LR_ACTOR = 1e-5         # learning rate of the actor 
-LR_CRITIC = 1e-4        # learning rate of the critic
+GAMMA = 0.9            # discount factor
+TAU = 1e-2              # for soft update of target parameters
+LR_ACTOR = 1e-3         # learning rate of the actor 
+LR_CRITIC = 1e-2        # learning rate of the critic
 WEIGHT_DECAY = 0        # L2 weight decay
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -132,6 +132,7 @@ class Agent():
         # Compute actor loss
         actions_pred = self.actor_local(states)
         actor_loss = -self.critic_local(states, actions_pred).mean()
+        #print("LOSS INFO: critic_loss={0:.2E}, actor_loss={1:.2E}".format(critic_loss, actor_loss))
         # Minimize the loss
         self.actor_optimizer.zero_grad()
         actor_loss.backward()
@@ -178,7 +179,7 @@ class OUNoise:
     def sample(self):
         """Update internal state and return it as a noise sample."""
         x = self.state
-        dx = self.theta * (self.mu - x) + self.sigma * np.array([random.random() for i in range(len(x))])
+        dx = self.theta * (self.mu - x) + self.sigma * np.array([np.random.randn() for i in range(len(x))])
         self.state = x + dx
         return self.state
 
